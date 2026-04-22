@@ -1,0 +1,24 @@
+# Translator - 实时同声传译软件
+# 依赖安装
+
+funasr>=1.0.0
+transformers>=4.30.0
+torch>=2.0.0
+pyaudio>=0.2.13
+websockets>=11.0.0
+numpy>=1.24.0
+langid>=1.1.6
+accelerate>=0.20.0
+safetensors>=0.3.0
+
+# 可选 - 仅 CPU
+# torch>=2.0.0
+
+# 可选 - CUDA 支持 (根据你的 CUDA 版本选择)
+# torch==2.0.0+cu118
+# torch==2.0.1+cu118
+# torch==2.1.0+cu118
+# torch==2.2.0+cu118
+
+# iOS 开发 (如需编译 ML 模型)
+# coremltools>=7.0

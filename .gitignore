@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# WhisperKit downloaded models
+ios/openai_whisper-*/
+
+# SPM
+.swiftpm/
+Package.resolved
+core/

@@ -1,0 +1,45 @@
+{
+  "name": "Translator",
+  "version": "1.0.0",
+  "description": "实时同声传译软件",
+  "requires_python": ">=3.10",
+  "dependencies": [
+    "funasr>=1.0.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
+    "pyaudio>=0.2.13",
+    "websockets>=11.0.0",
+    "numpy>=1.24.0",
+    "langid>=1.1.6"
+  ],
+  "optional_dependencies": {
+    "cuda": [
+      "torch>=2.0.0+cu118"
+    ]
+  },
+  "model_configs": {
+    "asr": {
+      "recommended": [
+        "Qwen3-ASR-0.6B",
+        "Qwen3-ASR-1.7B", 
+        "Fun-ASR-Nano-2512",
+        "Fun-ASR-MLT-Nano-2512"
+      ]
+    },
+    "translation": [
+      "nllb-200-distilled-600M",
+      "nllb-200-distilled-1.3B",
+      "mBART-50"
+    ]
+  },
+  "ios_app": {
+    "bundle_id": "com.translator.app",
+    "min_ios_version": "16.0",
+    "features": [
+      "WebSocket 连接",
+      "实时翻译显示",
+      "翻译历史记录",
+      "服务器配置"
+    ]
+  }
+}
