@@ -28,13 +28,13 @@ struct ContentView: View {
             }
             .background {
                 // Invisible view hosting the translation session.
-                // Uses .id to recreate when target language changes.
+                // Uses .id to recreate when languages change.
                 Color.clear
                     .frame(width: 0, height: 0)
-                    .id(viewModel.targetLanguage)
+                    .id(viewModel.translationTaskId)
                     .translationTask(
                         TranslationSession.Configuration(
-                            source: Locale.Language(identifier: "en"),
+                            source: Locale.Language(identifier: viewModel.appleSourceLanguage),
                             target: Locale.Language(identifier: viewModel.targetLanguage)
                         )
                     ) { session in
@@ -61,15 +61,21 @@ struct StatusBarView: View {
             if viewModel.isModelLoading {
                 ProgressView()
                     .scaleEffect(0.7)
-                Text("加载模型中...")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if viewModel.isModelDownloading {
+                    Text("下载中 \(Int(viewModel.modelDownloadProgress * 100))%")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("加载模型中...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             } else {
                 Circle()
                     .fill(viewModel.isTranslating ? Color.green : (viewModel.isModelLoaded ? Color.gray : Color.orange))
                     .frame(width: 10, height: 10)
 
-                Text(viewModel.isTranslating ? "翻译中" : (viewModel.isModelLoaded ? "就绪" : "未加载模型"))
+                Text(viewModel.isTranslating ? "实时翻译中" : (viewModel.isModelLoaded ? "就绪" : "未加载模型"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -80,6 +86,16 @@ struct StatusBarView: View {
                 Text("识别语言: \(viewModel.detectedLanguage)")
                     .font(.caption)
                     .foregroundColor(.secondary)
+            }
+
+            if viewModel.isScreenSharing {
+                Text("悬浮字幕")
+                    .font(.caption2)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.purple)
+                    .cornerRadius(4)
             }
         }
         .padding()
@@ -93,6 +109,22 @@ struct TranslationAreaView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
+                // Live streaming preview
+                if !viewModel.currentTranscriptionText.isEmpty {
+                    HStack {
+                        Text(viewModel.currentTranscriptionText)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .italic()
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(0.5)
+                    }
+                    .padding()
+                    .background(Color(white: 0.97))
+                    .cornerRadius(12)
+                }
+
                 ForEach(0..<viewModel.translationHistory.count, id: \.self) { index in
                     let item = viewModel.translationHistory[index]
                     TranslationCardView(
@@ -102,7 +134,7 @@ struct TranslationAreaView: View {
                     )
                 }
 
-                if viewModel.translationHistory.isEmpty {
+                if viewModel.translationHistory.isEmpty && viewModel.currentTranscriptionText.isEmpty {
                     VStack {
                         Spacer()
                         Image(systemName: "waveform")
@@ -248,17 +280,44 @@ struct SettingsView: View {
                 Section("语音识别模型") {
                     Picker("Whisper 模型", selection: $viewModel.selectedModel) {
                         ForEach(viewModel.availableModels, id: \.self) { model in
-                            Text(model).tag(model)
+                            HStack {
+                                Text(displayName(for: model))
+                                Spacer()
+                                if viewModel.isModelBundled(model) {
+                                    Image(systemName: "app.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                } else if viewModel.isModelDownloaded(model) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                        .font(.caption)
+                                } else {
+                                    Image(systemName: "arrow.down.circle")
+                                        .foregroundColor(.blue)
+                                        .font(.caption)
+                                }
+                            }
+                            .tag(model)
                         }
                     }
                     .onChange(of: viewModel.selectedModel) { _, newValue in
                         viewModel.switchModel(newValue)
                     }
 
-                    if viewModel.isModelLoading {
+                    if viewModel.isModelDownloading {
+                        VStack(alignment: .leading) {
+                            Text("正在下载模型...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            ProgressView(value: viewModel.modelDownloadProgress)
+                                .tint(.blue)
+                        }
+                    }
+
+                    if viewModel.isModelLoading && !viewModel.isModelDownloading {
                         HStack {
                             ProgressView()
-                            Text("正在下载并加载模型...")
+                            Text("正在加载模型...")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -270,15 +329,29 @@ struct SettingsView: View {
                             .foregroundColor(.red)
                     }
 
-                    Button(viewModel.isModelLoaded ? "模型已加载" : "加载模型") {
+                    Button(viewModel.isModelLoaded ? "模型已加载" : (viewModel.isModelDownloaded(viewModel.selectedModel) ? "加载模型" : "下载并加载模型")) {
                         Task {
                             await viewModel.loadModel()
                         }
                     }
                     .disabled(viewModel.isModelLoading || viewModel.isModelLoaded)
+
+                    if viewModel.isModelDownloaded(viewModel.selectedModel) && !viewModel.isModelBundled(viewModel.selectedModel) && !viewModel.isModelLoading {
+                        Button("删除本地模型", role: .destructive) {
+                            viewModel.deleteLocalModel(viewModel.selectedModel)
+                        }
+                    }
                 }
 
-                Section("翻译目标语言") {
+                Section("输入语种") {
+                    Picker("识别语言", selection: $viewModel.sourceLanguage) {
+                        ForEach(viewModel.availableSourceLanguages, id: \.code) { lang in
+                            Text(lang.name).tag(lang.code)
+                        }
+                    }
+                }
+
+                Section("输出语种") {
                     Picker("目标语言", selection: $viewModel.targetLanguage) {
                         ForEach(viewModel.availableTargetLanguages, id: \.code) { lang in
                             Text(lang.name).tag(lang.code)
@@ -287,7 +360,7 @@ struct SettingsView: View {
                 }
 
                 Section("关于") {
-                    LabeledContent("版本", value: "2.0.0")
+                    LabeledContent("版本", value: "0.0.3")
                     LabeledContent("ASR 引擎", value: "WhisperKit (端侧)")
                     LabeledContent("翻译引擎", value: "Apple Translation (端侧)")
                     LabeledContent("网络要求", value: "无需网络（离线可用）")
@@ -302,6 +375,15 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func displayName(for model: String) -> String {
+        // Convert "openai_whisper-base" → "base", "openai_whisper-large-v3_turbo" → "large-v3-turbo"
+        let name = model
+            .replacingOccurrences(of: "openai_whisper-", with: "")
+            .replacingOccurrences(of: "distil-whisper_distil-", with: "distil-")
+            .replacingOccurrences(of: "_turbo", with: "-turbo")
+        return name
     }
 }
 

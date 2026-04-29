@@ -14,6 +14,8 @@ DerivedData/
 
 # WhisperKit downloaded models
 ios/openai_whisper-*/
+ios/WhisperModels/openai_whisper-*/
+ios/WhisperModels/distil-whisper_*/
 
 # SPM
 .swiftpm/

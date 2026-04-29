@@ -40,7 +40,6 @@ struct AudioProcessingTests {
         }
         let resampled = resample(audio, from: 44100, to: 16000)
         #expect(resampled.count == 1600)
-        // Resampled signal should still be a sine wave (values between -1 and 1)
         for sample in resampled {
             #expect(sample >= -1.1 && sample <= 1.1)
         }
@@ -65,17 +64,18 @@ struct TranslationViewModelStateTests {
         #expect(vm.isTranslating == false)
         #expect(vm.isScreenSharing == false)
         #expect(vm.translationHistory.isEmpty)
-        #expect(vm.selectedModel == "base")
         #expect(vm.targetLanguage == "zh-Hans")
+        #expect(vm.isStreamMode == false)
+        #expect(vm.currentTranscriptionText.isEmpty)
     }
 
     @Test("Available models contain expected options")
     func testAvailableModels() async {
         let vm = TranslationViewModel()
-        #expect(vm.availableModels.contains("tiny"))
-        #expect(vm.availableModels.contains("base"))
-        #expect(vm.availableModels.contains("small"))
-        #expect(vm.availableModels.contains("large-v3-turbo"))
+        #expect(vm.availableModels.contains("openai_whisper-tiny"))
+        #expect(vm.availableModels.contains("openai_whisper-base"))
+        #expect(vm.availableModels.contains("openai_whisper-small"))
+        #expect(vm.availableModels.contains("openai_whisper-large-v3_turbo"))
     }
 
     @Test("Available target languages contain expected options")
@@ -91,7 +91,6 @@ struct TranslationViewModelStateTests {
     @Test("Translation history is capped at 50")
     func testTranslationHistoryCap() async {
         let vm = TranslationViewModel()
-        // Simulate adding 60 items
         for i in 0..<60 {
             vm.translationHistory.insert(("text \(i)", "翻译 \(i)", "en"), at: 0)
             if vm.translationHistory.count > 50 {
@@ -99,33 +98,39 @@ struct TranslationViewModelStateTests {
             }
         }
         #expect(vm.translationHistory.count == 50)
-        // Most recent should be first
         #expect(vm.translationHistory.first?.original == "text 59")
+    }
+
+    @Test("Selected model is persisted to UserDefaults")
+    func testSelectedModelPersistence() async {
+        let key = "selectedModel"
+        let original = UserDefaults.standard.string(forKey: key)
+        defer {
+            if let original = original {
+                UserDefaults.standard.set(original, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+
+        UserDefaults.standard.set("openai_whisper-small", forKey: key)
+        let vm = TranslationViewModel()
+        #expect(vm.selectedModel == "openai_whisper-small")
     }
 }
 
-@Suite("Audio Buffer Chunking Tests")
-struct AudioBufferChunkingTests {
+@Suite("Streaming State Tests")
+struct StreamingStateTests {
 
-    @Test("2-second buffer at 16kHz is 32000 samples")
-    func testBufferSizeCalculation() async {
-        let sampleRate: Double = 16000
-        let duration: Double = 2.0
-        let requiredSamples = Int(sampleRate * duration)
-        #expect(requiredSamples == 32000)
+    @Test("Current transcription text starts empty")
+    func testCurrentTranscriptionTextInitial() async {
+        let vm = TranslationViewModel()
+        #expect(vm.currentTranscriptionText.isEmpty)
     }
 
-    @Test("Buffer accumulates correctly before triggering processing")
-    func testBufferAccumulation() async {
-        let chunkSize = 32000
-        var buffer: [Float] = []
-
-        // Add samples in smaller chunks
-        for _ in 0..<3 {
-            buffer.append(contentsOf: [Float](repeating: 0.5, count: 12000))
-        }
-
-        // Should have 36000 samples total, enough for one chunk
-        #expect(buffer.count >= chunkSize)
+    @Test("Stream mode starts as false")
+    func testStreamModeInitial() async {
+        let vm = TranslationViewModel()
+        #expect(vm.isStreamMode == false)
     }
 }
