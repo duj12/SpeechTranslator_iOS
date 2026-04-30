@@ -42,7 +42,7 @@ for model in "${MODELS[@]}"; do
     fi
 
     echo "[$model] Downloading..."
-    huggingface-cli download "$REPO" --include "$model/*" --local-dir "$MODELS_DIR"
+    hf download "$REPO" --include "$model/*" --local-dir "$MODELS_DIR"
     echo "[$model] Done."
 done
 

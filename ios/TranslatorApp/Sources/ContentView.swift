@@ -75,9 +75,19 @@ struct StatusBarView: View {
                     .fill(viewModel.isTranslating ? Color.green : (viewModel.isModelLoaded ? Color.gray : Color.orange))
                     .frame(width: 10, height: 10)
 
-                Text(viewModel.isTranslating ? "实时翻译中" : (viewModel.isModelLoaded ? "就绪" : "未加载模型"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if viewModel.isTranscribing {
+                    Text("识别中...")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                } else if viewModel.isTranslating {
+                    Text("实时翻译中")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text(viewModel.isModelLoaded ? "就绪" : "未加载模型")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
             Spacer()
@@ -109,16 +119,18 @@ struct TranslationAreaView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
-                // Live streaming preview
+                // Live streaming preview (unconfirmed/draft text)
                 if !viewModel.currentTranscriptionText.isEmpty {
                     HStack {
                         Text(viewModel.currentTranscriptionText)
                             .font(.body)
-                            .foregroundColor(.secondary)
-                            .italic()
+                            .foregroundColor(viewModel.isTranscribing ? .blue : .secondary)
+                            .italic(viewModel.isTranscribing)
                         Spacer()
-                        ProgressView()
-                            .scaleEffect(0.5)
+                        if viewModel.isTranscribing {
+                            ProgressView()
+                                .scaleEffect(0.5)
+                        }
                     }
                     .padding()
                     .background(Color(white: 0.97))
