@@ -8,18 +8,35 @@
 
 /* Begin PBXBuildFile section */
 		1DBE779B1C17A7277A77A4DE /* TranslationViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CDDA35058A144C64BA69650 /* TranslationViewModelTests.swift */; };
+		2394455EA2CE85C856BBCD21 /* SampleHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 622783508C0C272678894391 /* SampleHandler.swift */; };
 		374BAB2CE5B82212F5AF7837 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 45D750F02BE787EC0C81034A /* WhisperKit */; };
 		3F3F5A5489B490474E52AC53 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C97ADA7DAC4E1466513B973 /* ContentView.swift */; };
 		4F16B9932EAC047FF53F8337 /* TranslatorAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F39275F114FD943B429DAD /* TranslatorAttributes.swift */; };
+		502B0CC94617D60F4B8F690F /* BroadcastUploadExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F76AE512BEF4582452DD32A2 /* BroadcastUploadExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		58D13F0C39CF3A47ABD98BF0 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3378C4593B217D5EF60C0F9A /* LiveActivityManager.swift */; };
 		79F0A0F803E4D0C1CA208EDC /* TranslatorWidgetLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4706A826C3C10CC1599E65D /* TranslatorWidgetLiveActivity.swift */; };
 		8F172B706B7EFA9EC7E9E2F6 /* TranslationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8AE220CCDCFE588B24CA444 /* TranslationViewModel.swift */; };
 		AF74E03DFDF9EF660EA0BFB9 /* TranslatorAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F39275F114FD943B429DAD /* TranslatorAttributes.swift */; };
 		B8BA80F6AB7547D18FE8A52E /* AudioUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA17082A2B7147FC2FD61C8 /* AudioUtils.swift */; };
 		BA788F16C18FD753E84607E3 /* WhisperModels in Resources */ = {isa = PBXBuildFile; fileRef = D4536C2F147628F434AA9D95 /* WhisperModels */; };
+		D4810577321B61DF35D4EC47 /* TranslatorWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A2B2641020B4CE3C6ABC1920 /* TranslatorWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		0EF0EFA9B126C3D03E85D40D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E49A51EE66A4ABA6AA7603AB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 31AAB484275FFA033C0098BE;
+			remoteInfo = BroadcastUploadExtension;
+		};
+		B535A2B946ED16FD52705C89 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E49A51EE66A4ABA6AA7603AB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 10E81B46F3F949540367FDD7;
+			remoteInfo = TranslatorWidget;
+		};
 		E01FC1B72A6D779536EEC47A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E49A51EE66A4ABA6AA7603AB /* Project object */;
@@ -29,20 +46,40 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		CD4BD3328710D863361F98A0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				502B0CC94617D60F4B8F690F /* BroadcastUploadExtension.appex in Embed Foundation Extensions */,
+				D4810577321B61DF35D4EC47 /* TranslatorWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		3378C4593B217D5EF60C0F9A /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		36A74092316E34A2963DD48A /* TranslatorApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TranslatorApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3B3FB6215CC73AEBD2C352CF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		41BDC3D4DD901DBC80D926FF /* BroadcastUploadExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BroadcastUploadExtension.entitlements; sourceTree = "<group>"; };
 		53F39275F114FD943B429DAD /* TranslatorAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslatorAttributes.swift; sourceTree = "<group>"; };
+		622783508C0C272678894391 /* SampleHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleHandler.swift; sourceTree = "<group>"; };
 		7C97ADA7DAC4E1466513B973 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8AB4F6A1021E539BCE5696AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8B0E5B7A4843D3FB6F12E826 /* TranslatorAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TranslatorAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8CDDA35058A144C64BA69650 /* TranslationViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationViewModelTests.swift; sourceTree = "<group>"; };
+		A0E87D1C4E1D342DFA29FCF4 /* TranslatorApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TranslatorApp.entitlements; sourceTree = "<group>"; };
 		A2B2641020B4CE3C6ABC1920 /* TranslatorWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TranslatorWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BDA17082A2B7147FC2FD61C8 /* AudioUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioUtils.swift; sourceTree = "<group>"; };
 		D4536C2F147628F434AA9D95 /* WhisperModels */ = {isa = PBXFileReference; lastKnownFileType = folder; path = WhisperModels; sourceTree = SOURCE_ROOT; };
 		E4706A826C3C10CC1599E65D /* TranslatorWidgetLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslatorWidgetLiveActivity.swift; sourceTree = "<group>"; };
 		E8AE220CCDCFE588B24CA444 /* TranslationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationViewModel.swift; sourceTree = "<group>"; };
 		EC36DBF4B341FD4C6172ACFC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F76AE512BEF4582452DD32A2 /* BroadcastUploadExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = BroadcastUploadExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,9 +94,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		281577A500576647C41B187F /* BroadcastUploadExtension */ = {
+			isa = PBXGroup;
+			children = (
+				41BDC3D4DD901DBC80D926FF /* BroadcastUploadExtension.entitlements */,
+				3B3FB6215CC73AEBD2C352CF /* Info.plist */,
+				622783508C0C272678894391 /* SampleHandler.swift */,
+			);
+			path = BroadcastUploadExtension;
+			sourceTree = "<group>";
+		};
 		2C60F07B78A07DAE2FB66B9E /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				F76AE512BEF4582452DD32A2 /* BroadcastUploadExtension.appex */,
 				36A74092316E34A2963DD48A /* TranslatorApp.app */,
 				8B0E5B7A4843D3FB6F12E826 /* TranslatorAppTests.xctest */,
 				A2B2641020B4CE3C6ABC1920 /* TranslatorWidget.appex */,
@@ -102,6 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				D4536C2F147628F434AA9D95 /* WhisperModels */,
+				281577A500576647C41B187F /* BroadcastUploadExtension */,
 				FD9AFEF870C543BC97F18CD4 /* Resources */,
 				A240C46C1AF6EAD2DE093ABC /* Sources */,
 				B829639573CA58C791CF5C8E /* Tests */,
@@ -114,6 +163,7 @@
 			isa = PBXGroup;
 			children = (
 				8AB4F6A1021E539BCE5696AB /* Info.plist */,
+				A0E87D1C4E1D342DFA29FCF4 /* TranslatorApp.entitlements */,
 			);
 			name = Resources;
 			path = TranslatorApp/Resources;
@@ -139,6 +189,23 @@
 			productReference = A2B2641020B4CE3C6ABC1920 /* TranslatorWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		31AAB484275FFA033C0098BE /* BroadcastUploadExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AF89A0738C98B1E930620584 /* Build configuration list for PBXNativeTarget "BroadcastUploadExtension" */;
+			buildPhases = (
+				BA45634FB45C5EA13C098E63 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BroadcastUploadExtension;
+			packageProductDependencies = (
+			);
+			productName = BroadcastUploadExtension;
+			productReference = F76AE512BEF4582452DD32A2 /* BroadcastUploadExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		3303B331996E147235D01667 /* TranslatorApp */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6585F4733F32BC74485CBD49 /* Build configuration list for PBXNativeTarget "TranslatorApp" */;
@@ -146,10 +213,13 @@
 				3A221DCB24E643FE3920C4AB /* Sources */,
 				8C019CA32A62920A88DEA179 /* Resources */,
 				ACEAB8C377DC904B764D9772 /* Frameworks */,
+				CD4BD3328710D863361F98A0 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1E2781A391074B3B65221BA7 /* PBXTargetDependency */,
+				EC8E0AA1A26D342DA68EE8AA /* PBXTargetDependency */,
 			);
 			name = TranslatorApp;
 			packageProductDependencies = (
@@ -187,12 +257,19 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					10E81B46F3F949540367FDD7 = {
+						DevelopmentTeam = U2HV6TRBRS;
+						ProvisioningStyle = Automatic;
+					};
+					31AAB484275FFA033C0098BE = {
+						DevelopmentTeam = U2HV6TRBRS;
 						ProvisioningStyle = Automatic;
 					};
 					3303B331996E147235D01667 = {
+						DevelopmentTeam = U2HV6TRBRS;
 						ProvisioningStyle = Automatic;
 					};
 					3EECF5656F03B0ADEBBF043D = {
+						DevelopmentTeam = U2HV6TRBRS;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -214,6 +291,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				31AAB484275FFA033C0098BE /* BroadcastUploadExtension */,
 				3303B331996E147235D01667 /* TranslatorApp */,
 				3EECF5656F03B0ADEBBF043D /* TranslatorAppTests */,
 				10E81B46F3F949540367FDD7 /* TranslatorWidget */,
@@ -262,6 +340,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BA45634FB45C5EA13C098E63 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2394455EA2CE85C856BBCD21 /* SampleHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -270,13 +356,46 @@
 			target = 3303B331996E147235D01667 /* TranslatorApp */;
 			targetProxy = E01FC1B72A6D779536EEC47A /* PBXContainerItemProxy */;
 		};
+		1E2781A391074B3B65221BA7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 31AAB484275FFA033C0098BE /* BroadcastUploadExtension */;
+			targetProxy = 0EF0EFA9B126C3D03E85D40D /* PBXContainerItemProxy */;
+		};
+		EC8E0AA1A26D342DA68EE8AA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 10E81B46F3F949540367FDD7 /* TranslatorWidget */;
+			targetProxy = B535A2B946ED16FD52705C89 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		2FD91540992BC745C6E7D996 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = BroadcastUploadExtension/BroadcastUploadExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
+				INFOPLIST_FILE = BroadcastUploadExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.0.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator.broadcast;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		344833AA9A17EB0C611038A2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
 				INFOPLIST_FILE = TranslatorWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -284,7 +403,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.translator.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator.widget;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -327,7 +446,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPER_TEAM = "";
+				DEVELOPER_TEAM = U2HV6TRBRS;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -354,7 +473,9 @@
 		5A89B9C2249A467801F72A75 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
 				INFOPLIST_FILE = TranslatorWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -362,7 +483,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.translator.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator.widget;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -373,15 +494,18 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TranslatorApp/Resources/TranslatorApp.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
 				INFOPLIST_FILE = TranslatorApp/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.translator.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -391,16 +515,40 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = TranslatorApp/Resources/TranslatorApp.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
 				INFOPLIST_FILE = TranslatorApp/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.translator.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator;
 				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BF126C58D4A6D9943B43D07C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = BroadcastUploadExtension/BroadcastUploadExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
+				INFOPLIST_FILE = BroadcastUploadExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.0.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator.broadcast;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -441,7 +589,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPER_TEAM = "";
+				DEVELOPER_TEAM = U2HV6TRBRS;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -476,14 +624,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.translator.app.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TranslatorApp.app/TranslatorApp";
@@ -494,14 +644,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U2HV6TRBRS;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.translator.app.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dujing.translator.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TranslatorApp.app/TranslatorApp";
@@ -543,6 +695,15 @@
 			buildConfigurations = (
 				5A89B9C2249A467801F72A75 /* Debug */,
 				344833AA9A17EB0C611038A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AF89A0738C98B1E930620584 /* Build configuration list for PBXNativeTarget "BroadcastUploadExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2FD91540992BC745C6E7D996 /* Debug */,
+				BF126C58D4A6D9943B43D07C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

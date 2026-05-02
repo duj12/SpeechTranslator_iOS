@@ -1,6 +1,7 @@
 import SwiftUI
 import Translation
 import UniformTypeIdentifiers
+import ReplayKit
 
 struct ContentView: View {
     @StateObject private var viewModel = TranslationViewModel()
@@ -26,9 +27,16 @@ struct ContentView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView(viewModel: viewModel)
             }
+            .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
+                let isCaptured = UIScreen.main.isCaptured
+                if isCaptured && !viewModel.isTranslating {
+                    viewModel.startScreenShareTranslation()
+                } else if !isCaptured && viewModel.isScreenSharing {
+                    viewModel.stopTranslation()
+                }
+            }
             .background {
-                // Invisible view hosting the translation session.
-                // Uses .id to recreate when languages change.
+                // Confirmed translation session
                 Color.clear
                     .frame(width: 0, height: 0)
                     .id(viewModel.translationTaskId)
@@ -45,6 +53,29 @@ struct ContentView: View {
                             } catch {
                                 viewModel.handleTranslationResult(original: text, translated: "")
                                 print("Translation error: \(error)")
+                            }
+                        }
+                    }
+            }
+            .background {
+                // Draft translation session
+                Color.clear
+                    .frame(width: 0, height: 0)
+                    .id("draft-\(viewModel.translationTaskId)")
+                    .translationTask(
+                        TranslationSession.Configuration(
+                            source: Locale.Language(identifier: viewModel.appleSourceLanguage),
+                            target: Locale.Language(identifier: viewModel.targetLanguage)
+                        )
+                    ) { session in
+                        for await text in viewModel.draftTranslationStream {
+                            do {
+                                let response = try await session.translate(text)
+                                await MainActor.run {
+                                    viewModel.currentTranslationText = response.targetText
+                                }
+                            } catch {
+                                print("Draft translation error: \(error)")
                             }
                         }
                     }
@@ -117,49 +148,76 @@ struct TranslationAreaView: View {
     @ObservedObject var viewModel: TranslationViewModel
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 12) {
-                // Live streaming preview (unconfirmed/draft text)
-                if !viewModel.currentTranscriptionText.isEmpty {
-                    HStack {
-                        Text(viewModel.currentTranscriptionText)
-                            .font(.body)
-                            .foregroundColor(viewModel.isTranscribing ? .blue : .secondary)
-                            .italic(viewModel.isTranscribing)
-                        Spacer()
-                        if viewModel.isTranscribing {
-                            ProgressView()
-                                .scaleEffect(0.5)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if viewModel.translationHistory.isEmpty && (viewModel.currentTranscriptionText.isEmpty || viewModel.currentTranscriptionText == "等待语音输入...") {
+                        VStack {
+                            Spacer()
+                            Image(systemName: "waveform")
+                                .font(.system(size: 60))
+                                .foregroundColor(.secondary)
+                            Text(viewModel.isModelLoaded ? "等待音频输入..." : "请在设置中加载模型")
+                                .foregroundColor(.secondary)
+                            Spacer()
                         }
+                        .frame(maxWidth: .infinity, minHeight: 300)
                     }
-                    .padding()
-                    .background(Color(white: 0.97))
-                    .cornerRadius(12)
-                }
 
-                ForEach(0..<viewModel.translationHistory.count, id: \.self) { index in
-                    let item = viewModel.translationHistory[index]
-                    TranslationCardView(
-                        originalText: item.original,
-                        translatedText: item.translated,
-                        language: item.language
-                    )
-                }
-
-                if viewModel.translationHistory.isEmpty && viewModel.currentTranscriptionText.isEmpty {
-                    VStack {
-                        Spacer()
-                        Image(systemName: "waveform")
-                            .font(.system(size: 60))
-                            .foregroundColor(.secondary)
-                        Text(viewModel.isModelLoaded ? "等待音频输入..." : "请在设置中加载模型")
-                            .foregroundColor(.secondary)
-                        Spacer()
+                    // Confirmed translation history (oldest at top, newest at bottom)
+                    ForEach(viewModel.translationHistory, id: \.id) { item in
+                        TranslationCardView(
+                            originalText: item.original,
+                            translatedText: item.translated,
+                            language: item.language
+                        )
+                        .id(item.id)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 300)
+
+                    // Draft area (current transcription + translation)
+                    if !viewModel.currentTranscriptionText.isEmpty && viewModel.currentTranscriptionText != "等待语音输入..." {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(viewModel.currentTranscriptionText)
+                                    .font(.body)
+                                    .foregroundColor(viewModel.isTranscribing ? .blue : .secondary)
+                                    .italic(viewModel.isTranscribing)
+                                Spacer()
+                                if viewModel.isTranscribing {
+                                    ProgressView()
+                                        .scaleEffect(0.5)
+                                }
+                            }
+
+                            if !viewModel.currentTranslationText.isEmpty {
+                                Text(viewModel.currentTranslationText)
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                                    .italic(true)
+                            }
+                        }
+                        .padding()
+                        .background(Color(white: 0.97))
+                        .cornerRadius(12)
+                        .id("draft")
+                    }
+
+                    // Scroll anchor at the very bottom
+                    Color.clear.frame(height: 1).id("bottom")
+                }
+                .padding()
+            }
+            .onChange(of: viewModel.translationHistory.count) { _, _ in
+                withAnimation {
+                    proxy.scrollTo("bottom", anchor: .bottom)
                 }
             }
-            .padding()
+            .onChange(of: viewModel.currentTranscriptionText) { _, _ in
+                withAnimation {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
         }
     }
 }
@@ -197,6 +255,55 @@ struct TranslationCardView: View {
     }
 }
 
+struct BroadcastPickerButton: View {
+    @ObservedObject var viewModel: TranslationViewModel
+
+    var body: some View {
+        #if targetEnvironment(simulator)
+        Button {
+            viewModel.modelLoadError = "屏幕录制需要在真机上使用"
+        } label: {
+            Label("媒体音频翻译", systemImage: "speaker.wave.2.circle.fill")
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(viewModel.isModelLoaded ? Color.purple : Color.gray)
+                .cornerRadius(12)
+        }
+        .disabled(!viewModel.isModelLoaded)
+        #else
+        BroadcastPickerRepresentable(isEnabled: viewModel.isModelLoaded)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .overlay(
+                Label("媒体音频翻译", systemImage: "speaker.wave.2.circle.fill")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .allowsHitTesting(false)
+            )
+            .background(viewModel.isModelLoaded ? Color.purple : Color.gray)
+            .cornerRadius(12)
+            .padding(.horizontal)
+        #endif
+    }
+}
+
+struct BroadcastPickerRepresentable: UIViewRepresentable {
+    var isEnabled: Bool
+
+    func makeUIView(context: Context) -> RPSystemBroadcastPickerView {
+        let picker = RPSystemBroadcastPickerView()
+        picker.preferredExtension = "com.dujing.translator.broadcast"
+        picker.showsMicrophoneButton = false
+        return picker
+    }
+
+    func updateUIView(_ uiView: RPSystemBroadcastPickerView, context: Context) {
+        uiView.isUserInteractionEnabled = isEnabled
+    }
+}
+
 struct ControlsAreaView: View {
     @ObservedObject var viewModel: TranslationViewModel
     @State private var showFilePicker = false
@@ -230,18 +337,9 @@ struct ControlsAreaView: View {
                     }
                     .disabled(!viewModel.isModelLoaded)
 
-                    Button {
-                        viewModel.startScreenShareTranslation()
-                    } label: {
-                        Label("屏幕共享翻译", systemImage: "rectangle.on.rectangle.circle.fill")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(viewModel.isModelLoaded ? Color.purple : Color.gray)
-                            .cornerRadius(12)
-                    }
-                    .disabled(!viewModel.isModelLoaded)
+                    // Broadcast picker for system audio capture
+                    BroadcastPickerButton(viewModel: viewModel)
+                        .disabled(!viewModel.isModelLoaded)
 
                     Button {
                         showFilePicker = true

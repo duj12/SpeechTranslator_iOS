@@ -92,13 +92,13 @@ struct TranslationViewModelStateTests {
     func testTranslationHistoryCap() async {
         let vm = TranslationViewModel()
         for i in 0..<60 {
-            vm.translationHistory.insert(("text \(i)", "翻译 \(i)", "en"), at: 0)
+            vm.translationHistory.append(TranslationHistoryItem(original: "text \(i)", translated: "翻译 \(i)", language: "en"))
             if vm.translationHistory.count > 50 {
-                vm.translationHistory.removeLast()
+                vm.translationHistory.removeFirst()
             }
         }
         #expect(vm.translationHistory.count == 50)
-        #expect(vm.translationHistory.first?.original == "text 59")
+        #expect(vm.translationHistory.last?.original == "text 59")
     }
 
     @Test("Selected model is persisted to UserDefaults")

@@ -4,6 +4,13 @@ import AVFoundation
 import WhisperKit
 import Translation
 
+struct TranslationHistoryItem: Identifiable {
+    let id = UUID()
+    let original: String
+    let translated: String
+    let language: String
+}
+
 class TranslationViewModel: ObservableObject {
     @Published var isModelLoaded = false
     @Published var isModelLoading = false
@@ -17,7 +24,7 @@ class TranslationViewModel: ObservableObject {
     @Published var originalText = ""
     @Published var translatedText = ""
     @Published var detectedLanguage = ""
-    @Published var translationHistory: [(original: String, translated: String, language: String)] = []
+    @Published var translationHistory: [TranslationHistoryItem] = []
 
     @Published var selectedModel: String {
         didSet { defaults.set(selectedModel, forKey: "selectedModel") }
@@ -89,12 +96,20 @@ class TranslationViewModel: ObservableObject {
 
     // Streaming state
     @Published var currentTranscriptionText: String = ""
+    @Published var currentTranslationText: String = ""
     @Published var isStreamMode = false
     @Published var isTranscribing = false
+
+    // Accumulated confirmed text from previous segments (prevents fragment loss)
+    private var confirmedText: String = ""
 
     // Translation: AsyncStream feeds text to .translationTask in the view
     private(set) var translationStream: AsyncStream<String>
     private var translationContinuation: AsyncStream<String>.Continuation?
+
+    // Draft translation stream
+    private(set) var draftTranslationStream: AsyncStream<String>
+    private var draftTranslationContinuation: AsyncStream<String>.Continuation?
 
     private var whisperKit: WhisperKit?
     private let screenRecorder = RPScreenRecorder.shared()
@@ -103,20 +118,30 @@ class TranslationViewModel: ObservableObject {
     // Streaming state
     private var lastBufferSize: Int = 0
     private var lastConfirmedSegmentEndSeconds: Float = 0
+    private var hasActiveSpeech: Bool = false
+    private var silenceBufferCount: Int = 0
+    private let silenceBuffersForFinalization = 8  // 8 × 100ms = 800ms
 
     init() {
         let (stream, continuation) = AsyncStream<String>.makeStream(of: String.self, bufferingPolicy: .bufferingNewest(10))
         self.translationStream = stream
         self.translationContinuation = continuation
 
+        let (draftStream, draftContinuation) = AsyncStream<String>.makeStream(of: String.self, bufferingPolicy: .bufferingNewest(10))
+        self.draftTranslationStream = draftStream
+        self.draftTranslationContinuation = draftContinuation
+
         selectedModel = defaults.string(forKey: "selectedModel") ?? "openai_whisper-base"
-        sourceLanguage = defaults.string(forKey: "sourceLanguage") ?? "auto"
+        var srcLang = defaults.string(forKey: "sourceLanguage") ?? "zh"
+        if srcLang == "auto" { srcLang = "zh" }
+        sourceLanguage = srcLang
         targetLanguage = defaults.string(forKey: "targetLanguage") ?? "zh-Hans"
         scanLocalModels()
     }
 
     deinit {
         translationContinuation?.finish()
+        draftTranslationContinuation?.finish()
     }
 
     // MARK: - Model Storage
@@ -277,9 +302,9 @@ class TranslationViewModel: ObservableObject {
             self.translatedText = translated
 
             if !original.isEmpty {
-                self.translationHistory.insert((original, translated, self.detectedLanguage), at: 0)
+                self.translationHistory.append(TranslationHistoryItem(original: original, translated: translated, language: self.detectedLanguage))
                 if self.translationHistory.count > 50 {
-                    self.translationHistory.removeLast()
+                    self.translationHistory.removeFirst()
                 }
             }
 
@@ -313,15 +338,21 @@ class TranslationViewModel: ObservableObject {
         guard let whisperKit = whisperKit else { return }
 
         do {
-            let results = try await whisperKit.transcribe(audioPath: url.path)
+            let whisperLanguage: String? = sourceLanguage == "auto" ? nil : sourceLanguage
+            let options = DecodingOptions(
+                verbose: false,
+                task: .transcribe,
+                language: whisperLanguage
+            )
+            let results = try await whisperKit.transcribe(audioPath: url.path, decodeOptions: options)
             guard let result = results.first else {
                 await MainActor.run {
                     modelLoadError = "未识别到语音内容"
                 }
                 return
             }
-            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty, text != "[BLANK_AUDIO]" else {
+            let text = cleanTranscriptionText(result.text)
+            guard !text.isEmpty else {
                 await MainActor.run {
                     modelLoadError = "未识别到语音内容"
                 }
@@ -368,58 +399,70 @@ class TranslationViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Screen Share Translation
+    // MARK: - Screen Share Translation (via Broadcast Extension for system audio)
+
+    private var broadcastAudioTimer: Timer?
+    private let appGroupDefaults = UserDefaults(suiteName: "group.com.dujing.translator")
 
     func startScreenShareTranslation() {
         guard isModelLoaded else {
             modelLoadError = "请先加载模型"
             return
         }
-        guard screenRecorder.isAvailable else {
-            modelLoadError = "屏幕录制不可用"
-            return
+        isStreamMode = true
+        isTranslating = true
+        isScreenSharing = true
+
+        // Start Live Activity
+        if #available(iOS 16.1, *) {
+            liveActivityManager = LiveActivityManager()
+            liveActivityManager?.startActivity(targetLanguage: self.targetLanguage)
         }
 
-        isStreamMode = true
-        screenRecorder.isMicrophoneEnabled = true
-        screenRecorder.isCameraEnabled = false
+        // Start polling for broadcast audio data from extension
+        startBroadcastAudioPolling()
 
-        screenRecorder.startCapture(handler: { [weak self] sampleBuffer, bufferType, error in
-            guard let self = self else { return }
-            if let error = error {
-                print("Screen capture error: \(error)")
-                return
+        // Start the streaming loop
+        Task {
+            try? await self.streamingLoop()
+        }
+    }
+
+    private func startBroadcastAudioPolling() {
+        // Poll App Group UserDefaults for audio data sent by Broadcast Upload Extension
+        broadcastAudioTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            self?.readBroadcastAudio()
+        }
+    }
+
+    private func readBroadcastAudio() {
+        guard let defaults = appGroupDefaults else { return }
+
+        // Read audio data from App Group (already 16kHz mono from SampleHandler)
+        for type in ["audioApp", "audioMic"] {
+            let key = "broadcast_\(type)_data"
+            guard let data = defaults.data(forKey: key) else { continue }
+
+            // Clear so we don't re-process
+            defaults.removeObject(forKey: key)
+
+            let floatCount = data.count / MemoryLayout<Float>.size
+            guard floatCount > 0 else { continue }
+
+            let audioSamples = data.withUnsafeBytes { ptr in
+                Array(UnsafeBufferPointer(start: ptr.baseAddress!.assumingMemoryBound(to: Float.self), count: floatCount))
             }
-            if bufferType == .audioApp || bufferType == .audioMic {
-                self.processScreenAudioBuffer(sampleBuffer)
+
+            // Feed into WhisperKit's audio processor (already 16kHz mono)
+            if let processor = whisperKit?.audioProcessor as? AudioProcessor {
+                processor.processBuffer(audioSamples)
             }
-        }, completionHandler: { [weak self] error in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                if let error = error {
-                    self.modelLoadError = "启动捕获失败: \(error.localizedDescription)"
-                } else {
-                    self.isTranslating = true
-                    self.isScreenSharing = true
+        }
+    }
 
-                    // Start Live Activity
-                    if #available(iOS 16.1, *) {
-                        self.liveActivityManager = LiveActivityManager()
-                        self.liveActivityManager?.startActivity(targetLanguage: self.targetLanguage)
-                    }
-
-                    // Auto-minimize app after 1 second
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        UIApplication.shared.perform(#selector(UIResponder.resignFirstResponder))
-                    }
-
-                    // Start the streaming loop after capture is active
-                    Task {
-                        try? await self.streamingLoop()
-                    }
-                }
-            }
-        })
+    private func stopBroadcastAudioPolling() {
+        broadcastAudioTimer?.invalidate()
+        broadcastAudioTimer = nil
     }
 
     private func processScreenAudioBuffer(_ sampleBuffer: CMSampleBuffer) {
@@ -429,44 +472,79 @@ class TranslationViewModel: ObservableObject {
         }
 
         let sampleRate = asbd.pointee.mSampleRate
-        let channels = asbd.pointee.mChannelsPerFrame
+        let channels = Int(asbd.pointee.mChannelsPerFrame)
+        let isPlanar = (asbd.pointee.mFormatFlags & kAudioFormatFlagIsNonInterleaved) != 0
 
-        var lengthAtOffset = Int()
-        var totalLength = Int()
-        var outPointer: UnsafeMutablePointer<CChar>?
+        var audioData: [Float] = []
 
-        guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer),
-              CMBlockBufferGetDataPointer(
-                  blockBuffer,
-                  atOffset: 0,
-                  lengthAtOffsetOut: &lengthAtOffset,
-                  totalLengthOut: &totalLength,
-                  dataPointerOut: &outPointer
-              ) == kCMBlockBufferNoErr,
-              let pointer = outPointer else {
-            return
+        if isPlanar {
+            // Planar format: use AudioBufferList for correct channel access
+            var blockBuffer: CMBlockBuffer?
+            var audioBufferList = AudioBufferList.allocate(maximumBuffers: channels)
+            let status = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
+                sampleBuffer,
+                bufferListSizeNeededOut: nil,
+                bufferListOut: audioBufferList.unsafeMutablePointer,
+                bufferListSize: AudioBufferList.sizeInBytes(maximumBuffers: channels),
+                blockBufferAllocator: nil,
+                blockBufferMemoryAllocator: nil,
+                flags: 0,
+                blockBufferOut: &blockBuffer
+            )
+            guard status == noErr else { return }
+
+            // Take first channel only (for mono output)
+            let buffer = audioBufferList.unsafePointer.pointee.mBuffers
+            if let data = buffer.mData {
+                let frameCount = Int(buffer.mDataByteSize) / MemoryLayout<Float>.size
+                data.withMemoryRebound(to: Float.self, capacity: frameCount) { ptr in
+                    audioData = Array(UnsafeBufferPointer(start: ptr, count: frameCount))
+                }
+            }
+        } else {
+            // Interleaved format: use CMBlockBufferGetDataPointer
+            var lengthAtOffset = Int()
+            var totalLength = Int()
+            var outPointer: UnsafeMutablePointer<CChar>?
+
+            guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer),
+                  CMBlockBufferGetDataPointer(
+                      blockBuffer,
+                      atOffset: 0,
+                      lengthAtOffsetOut: &lengthAtOffset,
+                      totalLengthOut: &totalLength,
+                      dataPointerOut: &outPointer
+                  ) == kCMBlockBufferNoErr,
+                  let pointer = outPointer else {
+                return
+            }
+
+            let floatCount = totalLength / MemoryLayout<Float>.size
+            audioData = pointer.withMemoryRebound(to: Float.self, capacity: floatCount) { ptr in
+                Array(UnsafeBufferPointer(start: ptr, count: floatCount))
+            }
+
+            if channels == 2 {
+                audioData = convertToMono(audioData)
+            }
         }
 
-        let floatCount = totalLength / MemoryLayout<Float>.size
-        let inputFloats = pointer.withMemoryRebound(to: Float.self, capacity: floatCount) { ptr in
-            Array(UnsafeBufferPointer(start: ptr, count: floatCount))
-        }
-
-        var processedAudio = channels == 2 ? convertToMono(inputFloats) : inputFloats
+        guard !audioData.isEmpty else { return }
 
         let sourceRate = Int(sampleRate)
         let targetRate = 16000
         if sourceRate != targetRate {
-            processedAudio = resample(processedAudio, from: sourceRate, to: targetRate)
+            audioData = resample(audioData, from: sourceRate, to: targetRate)
         }
 
         // Feed into WhisperKit's audio processor
         if let processor = whisperKit?.audioProcessor as? AudioProcessor {
-            processor.processBuffer(processedAudio)
+            processor.processBuffer(audioData)
         }
     }
 
     private func stopScreenCapture() {
+        stopBroadcastAudioPolling()
         screenRecorder.stopCapture { [weak self] error in
             DispatchQueue.main.async {
                 self?.isScreenSharing = false
@@ -479,15 +557,65 @@ class TranslationViewModel: ObservableObject {
 
     // MARK: - Streaming Transcription Loop
 
+    /// Strip Whisper special tokens like <|en|>, (music), [BLANK_AUDIO]
+    private func cleanTranscriptionText(_ text: String) -> String {
+        var cleaned = text
+        cleaned = cleaned.replacingOccurrences(of: "<[^>]*>", with: "", options: .regularExpression)
+        cleaned = cleaned.replacingOccurrences(of: "\\([^)]*\\)", with: "", options: .regularExpression)
+        cleaned = cleaned.replacingOccurrences(of: "\\[[^\\]]*\\]", with: "", options: .regularExpression)
+        cleaned = cleaned.replacingOccurrences(of: "  +", with: " ", options: .regularExpression)
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Finalize current speech: move draft to history, send for confirmed translation, reset state
+    private func finalizeCurrentSpeech() {
+        let text = currentTranscriptionText
+        guard !text.isEmpty, text != "等待语音输入..." else { return }
+
+        // Send confirmed text for translation (will be added to history by handleTranslationResult)
+        requestTranslation(of: text)
+
+        // Clear draft state
+        currentTranscriptionText = ""
+        currentTranslationText = ""
+        confirmedText = ""
+        hasActiveSpeech = false
+        silenceBufferCount = 0
+
+        // Reset audio buffer for next utterance
+        lastBufferSize = 0
+        lastConfirmedSegmentEndSeconds = 0
+        if let whisperKit = whisperKit {
+            whisperKit.audioProcessor.purgeAudioSamples(keepingLast: WhisperKit.sampleRate * 2)
+        }
+    }
+
     private func streamingLoop() async throws {
         guard let whisperKit = whisperKit else { return }
-        let requiredSegmentsForConfirmation = 2
         let compressionCheckWindow = 60
 
         while isTranslating && isStreamMode {
             let currentBuffer = whisperKit.audioProcessor.audioSamples
             let nextBufferSize = currentBuffer.count - lastBufferSize
             let nextBufferSeconds = Float(nextBufferSize) / Float(WhisperKit.sampleRate)
+
+            // Check for silence to finalize sentence
+            let energyValues = Array(whisperKit.audioProcessor.relativeEnergy.suffix(silenceBuffersForFinalization))
+            if hasActiveSpeech && energyValues.count >= silenceBuffersForFinalization {
+                let allSilent = energyValues.allSatisfy { $0 < 0.15 }
+                if allSilent {
+                    await MainActor.run { finalizeCurrentSpeech() }
+                    try await Task.sleep(nanoseconds: 50_000_000)
+                    continue
+                }
+            }
+
+            // Force finalization if buffer exceeds 20 seconds (prevents unbounded growth)
+            if hasActiveSpeech && Float(currentBuffer.count) / Float(WhisperKit.sampleRate) > 20.0 {
+                await MainActor.run { finalizeCurrentSpeech() }
+                try await Task.sleep(nanoseconds: 50_000_000)
+                continue
+            }
 
             guard nextBufferSeconds > 0.5 else {
                 if currentTranscriptionText.isEmpty && isTranslating {
@@ -511,32 +639,36 @@ class TranslationViewModel: ObservableObject {
                 continue
             }
 
+            // Voice detected — mark speech as active
+            hasActiveSpeech = true
+            silenceBufferCount = 0
             lastBufferSize = currentBuffer.count
 
-            let whisperLanguage: String? = sourceLanguage == "auto" ? nil : sourceLanguage
+            let isAutoDetect = sourceLanguage == "auto"
+            let whisperLanguage: String? = isAutoDetect ? nil : sourceLanguage
             let options = DecodingOptions(
                 verbose: false,
                 task: .transcribe,
                 language: whisperLanguage,
                 usePrefillPrompt: true,
-                usePrefillCache: true,
+                usePrefillCache: isAutoDetect,
                 withoutTimestamps: false,
                 clipTimestamps: [lastConfirmedSegmentEndSeconds],
                 compressionRatioThreshold: 2.4,
                 logProbThreshold: -1.0
             )
 
-            // Progress callback: update currentTranscriptionText word-by-word
+            // Progress callback: show confirmed + new partial text
             let progressCallback: TranscriptionCallback = { [weak self] progress in
                 guard let self else { return nil }
-                let text = progress.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !text.isEmpty {
+                let partialText = self.cleanTranscriptionText(progress.text)
+                if !partialText.isEmpty {
+                    let displayText = self.confirmedText.isEmpty ? partialText : self.confirmedText + partialText
                     DispatchQueue.main.async {
                         self.isTranscribing = true
-                        self.currentTranscriptionText = text
+                        self.currentTranscriptionText = displayText
                     }
                 }
-                // Early stopping: compression ratio check
                 let tokens = progress.tokens
                 if tokens.count > compressionCheckWindow {
                     let checkTokens = Array(tokens.suffix(compressionCheckWindow))
@@ -545,7 +677,6 @@ class TranslationViewModel: ObservableObject {
                         return false
                     }
                 }
-                // Early stopping: log probability check
                 if let avgLogprob = progress.avgLogprob,
                    let threshold = options.logProbThreshold,
                    avgLogprob < threshold {
@@ -566,38 +697,31 @@ class TranslationViewModel: ObservableObject {
                 }
 
                 let segments = result.segments
-                let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                let newText = cleanTranscriptionText(result.text)
 
                 await MainActor.run {
                     self.isTranscribing = false
-                    self.currentTranscriptionText = ""
                     self.detectedLanguage = result.language
 
-                    guard !segments.isEmpty, !text.isEmpty, text != "[BLANK_AUDIO]" else {
-                        return
-                    }
+                    guard !segments.isEmpty, !newText.isEmpty else { return }
 
-                    if segments.count > requiredSegmentsForConfirmation {
-                        let numToConfirm = segments.count - requiredSegmentsForConfirmation
-                        let confirmedArray = Array(segments.prefix(numToConfirm))
-                        let remaining = Array(segments.suffix(requiredSegmentsForConfirmation))
-
-                        if let lastConfirmed = confirmedArray.last,
-                           lastConfirmed.end > lastConfirmedSegmentEndSeconds {
-                            lastConfirmedSegmentEndSeconds = lastConfirmed.end
-                            let confirmedText = confirmedArray.map { $0.text }.joined()
-                                .trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !confirmedText.isEmpty {
-                                requestTranslation(of: confirmedText)
-                            }
-                        }
-                        self.currentTranscriptionText = remaining.map { $0.text }.joined()
+                    // Accumulate: confirmed text + new transcription text
+                    if self.confirmedText.isEmpty {
+                        self.confirmedText = newText
                     } else {
-                        self.currentTranscriptionText = text
+                        self.confirmedText += newText
+                    }
+                    self.currentTranscriptionText = self.confirmedText
+
+                    // Request draft translation of full text
+                    self.draftTranslationContinuation?.yield(self.confirmedText)
+
+                    // Update last confirmed segment position
+                    if let lastSegment = segments.last {
+                        lastConfirmedSegmentEndSeconds = lastSegment.end
                     }
                 }
 
-                // Purge old audio to keep buffer manageable
                 purgeConfirmedAudio()
             } catch {
                 print("Streaming transcription error: \(error)")
@@ -628,12 +752,11 @@ class TranslationViewModel: ObservableObject {
         isStreamMode = false
         isTranscribing = false
 
-        // Finalize any pending transcription text
-        let pendingText = currentTranscriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !pendingText.isEmpty && pendingText != "等待语音输入..." {
-            requestTranslation(of: pendingText)
-        }
+        // Finalize any pending speech
+        finalizeCurrentSpeech()
+        confirmedText = ""
         currentTranscriptionText = ""
+        currentTranslationText = ""
 
         if isScreenSharing {
             stopScreenCapture()
@@ -649,6 +772,8 @@ class TranslationViewModel: ObservableObject {
 
         lastBufferSize = 0
         lastConfirmedSegmentEndSeconds = 0
+        hasActiveSpeech = false
+        silenceBufferCount = 0
 
         DispatchQueue.main.async {
             self.isTranslating = false

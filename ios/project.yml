@@ -9,7 +9,7 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     TARGETED_DEVICE_FAMILY: "1"
-    DEVELOPER_TEAM: ""
+    DEVELOPER_TEAM: "U2HV6TRBRS"
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 
@@ -25,10 +25,17 @@ targets:
         buildPhase: resources
     dependencies:
       - package: WhisperKit
+      - target: BroadcastUploadExtension
+        embed: true
+      - target: TranslatorWidget
+        embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.translator.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.dujing.translator
         INFOPLIST_FILE: TranslatorApp/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TranslatorApp/Resources/TranslatorApp.entitlements
+        DEVELOPMENT_TEAM: "U2HV6TRBRS"
+        CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "0.0.3"
         CURRENT_PROJECT_VERSION: "1"
 
@@ -41,7 +48,9 @@ targets:
       - target: TranslatorApp
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.translator.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.dujing.translator.tests
+        DEVELOPMENT_TEAM: "U2HV6TRBRS"
+        CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "0.0.3"
         CURRENT_PROJECT_VERSION: "1"
 
@@ -53,8 +62,26 @@ targets:
       - path: TranslatorApp/Sources/TranslatorAttributes.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.translator.app.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.dujing.translator.widget
         INFOPLIST_FILE: TranslatorWidget/Info.plist
+        DEVELOPMENT_TEAM: "U2HV6TRBRS"
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "0.0.3"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+
+  BroadcastUploadExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: BroadcastUploadExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dujing.translator.broadcast
+        INFOPLIST_FILE: BroadcastUploadExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: BroadcastUploadExtension/BroadcastUploadExtension.entitlements
+        DEVELOPMENT_TEAM: "U2HV6TRBRS"
+        CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "0.0.3"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.9"
